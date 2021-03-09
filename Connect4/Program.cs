@@ -1,8 +1,10 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Threading;
 
-namespace Connect4
+namespace ConnectX
 {
     class Program
     {
@@ -32,20 +34,16 @@ namespace Connect4
         /// <param name="foregroundColour"></param>
         /// <param name="backgroundColour"></param>
         /// <returns>Returns the input of the user.</returns>
-        public static Data Read<Data>(ConsoleColor? foregroundColour = null, ConsoleColor? backgroundColour = null)
+        public static string Read(ConsoleColor? foregroundColour = null, ConsoleColor? backgroundColour = null)
         {
             if (foregroundColour != null) Console.ForegroundColor = (ConsoleColor)foregroundColour;
             if (backgroundColour != null) Console.BackgroundColor = (ConsoleColor)backgroundColour;
 
             // Getting the user input in a string form as it is the leat likely to provide errors.
             string input = Console.ReadLine();
-            // Returning the data to the variable.
             Console.ResetColor();
-            return (Data)Convert.ChangeType(input, typeof(Data));
-            // Error Handling : WILL BE DONE LATER
-                //input = Regex.Replace(input, "[a-z.,\\s!\"#¤%&/()=?`@£${[\\]}+;:öåä~¨^'*§½<>|]", "", RegexOptions.IgnoreCase,);
+            return input;
 
-            // Resetting the Console Color so that any colour changes are not carried through to other functions.
         }
 
         // * CATCH * ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -63,12 +61,16 @@ namespace Connect4
             Console.Clear();
         }
 
-        public static byte GetKey(bool menu = false)
+        public static byte GetKey(byte limit = 9, string message = "\nPlease only choose from the given options....", bool menu = false)
 		{
             ConsoleKey playerChoice = ConsoleKey.D0;
             while(true)
 	    	{
-                playerChoice = Console.ReadKey().Key;
+                try
+                {
+                    playerChoice = Console.ReadKey().Key;
+                }
+				catch (Exception e) { Console.WriteLine(e); }
                 switch (playerChoice)
 			    {
                     case ConsoleKey.Escape:
@@ -78,27 +80,37 @@ namespace Connect4
                     case ConsoleKey.D0:
                         return 0;
                     case ConsoleKey.D1:
+                        if (limit < 1) break;
                         return 1;
                     case ConsoleKey.D2:
+                        if (limit < 2) break;
                         return 2;
                     case ConsoleKey.D3:
+                        if (limit < 3) break;
                         return 3;
                     case ConsoleKey.D4:
+                        if (limit < 4) break;
                         return 4;
                     case ConsoleKey.D5:
+                        if (limit < 5) break;
                         return 5;
                     case ConsoleKey.D6:
+                        if (limit < 6) break;
                         return 6;
                     case ConsoleKey.D7:
+                        if (limit < 7) break;
                         return 7;
                     case ConsoleKey.D8:
+                        if (limit < 8) break;
                         return 8;
                     case ConsoleKey.D9:
+                        if (limit < 9) break;
                         return 9;
-                    default:
-                        Print("Please only choose from the given options....");
-                        break;
+                    case ConsoleKey.Z:
+                        if (menu) break;
+                        return 10;
                 }
+                Console.WriteLine(message);
             }
         }
 
@@ -115,176 +127,7 @@ namespace Connect4
             Console.Clear();
         }
 
-        private static void ChangePlayerName(Player player1, Player player2)
-        {
-            while (true)
-            {
-                Player chosenPlayer = player1, otherPlayer = player2;
-                Console.Clear();
-                Console.WriteLine("What player would you like to change the name of?");
-                Print($"1 - {player1.Name}\n", player1.Colour, null, true);
-                Print($"2 - {player2.Name}\n", player2.Colour, null, true);
-                Console.WriteLine("Please enter your choice...");
-                Console.WriteLine("Enter \"-1\" to exit without changing any player names...");
-                try
-                {
-                    sbyte playerNameChangeChoice = sbyte.Parse(Console.ReadLine());
-                    if(playerNameChangeChoice == 1 || playerNameChangeChoice == 2)
-					{
-                        chosenPlayer = player2;
-                        otherPlayer = player1;
-					}
-                    else if (playerNameChangeChoice == -1) return;
-                    else Print("That wasn't a valid option, please try again...\n", ConsoleColor.Red, null, true);
-                    while (true)
-                    {
-                        sbyte answer = 0;
-                        Console.Clear();
-                        Console.Write("Please enter the new name for ");
-
-                        Print(chosenPlayer.Name, chosenPlayer.Colour);
-                        Console.WriteLine(".");
-                        chosenPlayer.Name = Read<string>(chosenPlayer.Colour);
-                        Console.WriteLine();
-                        while (true)
-                        {
-                            Console.Write("Would you also like to rename ");
-                            Print(otherPlayer.Name, otherPlayer.Colour);
-
-                            Console.Write("?\n1 - Yes | 2 - No | 0 - Rename ");
-                            Print(chosenPlayer.Name, chosenPlayer.Colour);
-
-                            answer = sbyte.Parse(Console.ReadLine());
-                            if (answer == 0 || answer == 1) break;
-                            else if (answer == 2) return;
-                            else
-                            {
-                                answer = -2;
-                                Console.WriteLine("That wasn't a valid option.\nPress any key to try again...");
-                                Console.ReadKey();
-                                Console.Clear();
-                            }
-                        }
-                        if (answer == 0) continue;
-                        else if (answer == 1) break;
-                    }
-                }
-                catch {Catch(true);}
-                finally {Console.Clear();}
-            }
-        }
-
-        private static void PlayerColourChanger(Player player1, Player player2)
-        {
-            while (true)
-            {
-                // Declaring the player objects that determine which player has been selected.
-                Player chosenPlayer = player1, otherPlayer = player2;
-                
-                sbyte playerColourChoice = 0; // Declaring the variable for user input and giving it a default that triggers the question .
-                Console.Clear();
-
-                // Choosing the player to change the colour of.
-                while (playerColourChoice != 1 && playerColourChoice != 2)
-                {
-                    Console.WriteLine("What player would you like to change the colour of?");
-                    Print($"1 - {player1.Name}", player1.Colour, null, true);
-                    Print($"2 - {player2.Name}", player2.Colour, null, true);
-                    Console.WriteLine("Please enter your choice...");
-                    Console.WriteLine("Enter \"-1\" to exit without changing any player colours...");
-                    try
-                    {
-                        playerColourChoice = sbyte.Parse(Console.ReadLine());
-                        if (playerColourChoice == 2)
-                        {
-                            // Swapping the initialised variables values around should the user choose so.
-                            chosenPlayer = player2;
-                            otherPlayer = player1;
-                        }
-                        else if (playerColourChoice == -1)
-                        {
-                            Console.Clear();
-                            return;
-                        }
-                        else Console.WriteLine("That wasn't a valid option, please try again...\n");
-                    }
-                    catch { Catch(false); }
-                    finally { Console.Clear(); }
-                }
-
-                // Selecting a colour to set for the chosen user.
-                while (true)
-                {
-                    Console.Clear();
-                    Console.WriteLine("Please select a colour");
-
-                    // We get the colours from the Print method.
-                    ConsoleColor?[] colourChoices = new ConsoleColor?[12];
-                    colourChoices[0] = Print("1 - Dark Red", ConsoleColor.DarkRed, null, true);
-                    colourChoices[1] = Print("2 - Red", ConsoleColor.Red, null, true);
-                    colourChoices[2] = Print("3 - Dark Yellow", ConsoleColor.DarkYellow, null, true);
-                    colourChoices[3] = Print("4 - Yellow", ConsoleColor.Yellow, null, true);
-                    colourChoices[4] = Print("5 - Green", ConsoleColor.Green, null, true);
-                    colourChoices[5] = Print("6 - Dark Green", ConsoleColor.DarkGreen, null, true);
-                    colourChoices[6] = Print("7 - Dark Blue", ConsoleColor.DarkBlue, null, true);
-                    colourChoices[7] = Print("8 - Blue", ConsoleColor.Blue, null, true);
-                    colourChoices[8] = Print("9 - Dark Cyan", ConsoleColor.DarkCyan, null, true);
-                    colourChoices[9] = Print("10 - Cyan", ConsoleColor.Cyan, null, true);
-                    colourChoices[10] = Print("11 - Pink", ConsoleColor.Magenta, null, true);
-                    colourChoices[11] = Print("12 - Dark Pink", ConsoleColor.DarkMagenta, null, true);
-                    Console.WriteLine("Chose the wrong player? Enter \"0\" to go back...");
-                    Console.WriteLine("Decided you like the colours as they are? Enter \"-1\" to go back");
-
-                    try
-                    {
-                        sbyte colour = sbyte.Parse(Console.ReadLine());
-                        Console.Clear();
-
-                        // Sorting out non-colour changing related options.
-                        if (colour == -1) return;
-                        else if (colour == 0) break;
-
-                        // colour will always be +1 higher than the array because the array starts at '0'.
-                        // Dealing with errors that would otherwise cause the player reassign the same colour or assign the same colour to different players.
-                        if (chosenPlayer.Colour == colourChoices[colour - 1]) { Console.WriteLine($"{player1.Name} already has this colour selected.\n"); Console.ReadKey(); continue; }
-                        else if (otherPlayer.Colour == colourChoices[colour - 1]) { Console.WriteLine($"{player2.Name} already has this colour selected, please choose another colour.\nPress any key to try again..."); Console.ReadKey(); continue; }
-                        else
-                        {
-                            byte answer = 0;
-                            while (true)
-                            {
-                                // Assigning the colour to the chosen player.
-                                chosenPlayer.Colour = colourChoices[colour - 1];
-
-                                // Offering the player the option to change the other players colour.
-                                Console.Write("Would you like to change the colour of ");
-                                Print(otherPlayer.Name, otherPlayer.Colour);
-                                Console.WriteLine("?");
-                                Console.Write("1 - Yes | 2 - No | 0 - Recolour ");
-                                Print(chosenPlayer.Name, chosenPlayer.Colour, null, true);
-
-                                // Processing user input.
-                                answer = byte.Parse(Console.ReadLine());
-                                if (answer == 0 || answer == 1) break;
-                                else if (answer == 2) return;
-                                else if (answer != 0 && answer != 1)
-                                {
-                                    // Error handling.
-                                    Console.Clear();
-                                    Console.WriteLine("That wasn't a valid option.\nPress any key to try again...");
-                                    Console.ReadKey();
-                                    Console.Clear();
-                                }
-                            }
-                            if (answer == 0) continue;
-                            if (answer == 1) break;
-                        }
-                    }
-                    catch { Catch(null); }
-                    Console.Clear();
-                }
-            }
-        }
+       
 
         public static byte PauseMenu(Player player1, Player player2)
         {
@@ -308,7 +151,7 @@ namespace Connect4
                 Print("u", ConsoleColor.Red);
                 Print("r", ConsoleColor.DarkYellow);
                 Console.WriteLine("s", ConsoleColor.Yellow);
-                Console.WriteLine("3 - Change Player Names\n4 - Instructions (How to Play)\n5 - Restart Game\n0 - Quit Game");
+                Console.WriteLine("3 - Change Player Names\n4 - Instructions (How to Play)\n5 - Modify Board\n6 - Restart Game\n0 - Quit Game");
                 try
                 {
                     byte Option = GetKey();
@@ -323,18 +166,29 @@ namespace Connect4
                             return 1;
                         case 2: // Change the playerss colours.
                             Console.Clear();
-                            PlayerColourChanger(player1, player2);
+                            Player.ColourChanger(player1, player2);
                             break;
                         case 3:
-                            ChangePlayerName(player1, player2);
+                            Player.ChangeName(player1, player2);
                             break;
                         case 4: // View the instructions.
                             Instructions();
                             break;
-                        case 5: // Restart the game.
+                        case 5:
+							Console.WriteLine("You can change the size of the board, change the height of the board and the number of counters needed to win...");
+							Console.WriteLine("Modifying the board will end the match, are you sure you want to modify the board?");
+							Console.WriteLine("1 - Modfiy Game\n2 - Return to Pause Menu");
+                            byte answer = GetKey(limit: 2);
+                            if (answer == 1)
+                            {
+                                Gameboard.ResetBoard(hardReset: true, player1, player2);
+                                Gameboard.CustomiseGame();
+                            }
+                            break;
+                        case 6: // Restart the game.
                             Console.WriteLine("Restarting the game\n");
                             Console.Clear();
-                            return 5;
+                            return 6;
                         case 0: // Quit the game.
                             return 0;
                         default:
@@ -353,18 +207,22 @@ namespace Connect4
         // * THE GAME * ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         private static int PlayGame(Player player1, Player player2)
         {
-            // Used to decide who makes the first move.
+            // Used to decide who makes the first move. It is only used once in the next statement.
             Random random = new Random();
+            Player activePlayer = random.Next(2) == 0 ? player1 : player2;
+            
 
-            // Used for when the player is making a move.
-            bool player1Turn = true; // True = Player1 Move, False = Player 2 Move.
-            if (random.Next(2) == 1) player1Turn = false;
+            // These are used for declaring a winner and displaying information at the end of the game.
+            Player winningPlayer = null;
+            Player losingPlayer = null;
 
-            // * SETTING UP THE GAME * ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-            GameEngine.GameMode gameMode = GameEngine.ChooseGameMode(player1, player2); // Get game mode.
-            byte numberOfPlayers = GameEngine.ChooseNumberOfPlayers(player1, player2); // Declare and name players.
-
+            // Setting up the game.
+            Gameboard.Mode = GameEngine.ChooseGameMode(player1, player2); // Get game mode.
+            GameEngine.ChooseNumberOfPlayers(player1, player2); // Declare and name players.
+            Gameboard.SetUpBoard();
+            
+            
             // Printing a last message to the user / users playing.
             Console.Clear();
             Print(player1.Name, player1.Colour);
@@ -374,47 +232,92 @@ namespace Connect4
             Console.ReadKey();
             Console.Clear();
 
-            // * IN-GAME * ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-            Gameboard theGame = new Gameboard();
-
+            // IN-GAME 
+            DateTime startingTime = DateTime.Now; // This will be used to show how long a game has been played for.
             while (true)
             {
+                // Printing to the terminal who is playing and whose move it is.
                 Console.Clear();
                 Print(player1.Name, player1.Colour);
                 Console.Write(" vs ");
                 Print(player2.Name, player2.Colour);
+				Console.WriteLine($" | Connect {Gameboard.VictoryNumber} to win!");
                 Console.Write("\nIt is ");
-                if (player1Turn) Print(player1.Name + "'s", player1.Colour);
-                else Print(player2.Name + "'s", player2.Colour);
+                Print(activePlayer.Name + "'s", activePlayer.Colour);
                 Console.WriteLine(" turn...\n");
+
+
                 // Printing the game board with player instructions.
-                theGame.PrintGameBoard();
+                Gameboard.PrintGameBoard();
 
-                // * PLAYER INPUT * ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                byte playerChoice = 0;
-                try { playerChoice = GetKey(); }
-                catch{Console.WriteLine();}
 
-                Console.Clear();
-                if (playerChoice == 0)
+                // PLAYER INPUT
+                if (!activePlayer.IsRobot)
                 {
-                    byte pauseMenuValue = PauseMenu(player1, player2);
-                    if (pauseMenuValue == 0) return 0; // Quit the game.
-                    else if (pauseMenuValue == 5) break; // Restart the game by breaking out of the while loop.
+                    //Receiving input from the user.
+                    byte playerChoice = 0;
+                    playerChoice = GetKey(limit: Gameboard.BoardWidth);
+
+
+                    // Access pause menu.
+                    if (playerChoice == 0) // Entering '0' accesses the pause menu.
+                    {
+                        byte pauseMenuValue = PauseMenu(player1, player2);
+                        if (pauseMenuValue == 0) return 0; // Quit the game.
+                        else if (pauseMenuValue == 6) Gameboard.ResetBoard(true, player1, player2);
+                        continue;
+                    }
+                    else if (playerChoice == 10 && Gameboard.History.Count > 0) Gameboard.UndoMove(activePlayer); // Undo Move... 'GetKey()' Returns 10 when you enter [Z].
+                    else if (playerChoice < 10) activePlayer.MakeMove(playerChoice); // Place a counter on the board.
                 }
-                else if (player1Turn)
+                else activePlayer.ComputerMove(activePlayer == player1 ? player2 : player1);
+                
+                // It makes no sense to check for victory if the player hasn't made enough moves to win.
+                if (activePlayer.Moves >= Gameboard.VictoryNumber)
                 {
-                    player1.MakeMove((byte)playerChoice, theGame, player1, player2);
-                    player1Turn = false;
+                    winningPlayer = Gameboard.CheckCounter(Gameboard.History[Gameboard.History.Count - 1].Item1).Item1;
+                    losingPlayer = winningPlayer != null ? activePlayer == player1 ? player2 : player1 : null;
                 }
-                else if (!player1Turn)
-                {
-                    player1.MakeMove((byte)playerChoice, theGame, player2, player1);
-                    player1Turn = true;
+
+                // This is the end game screen. This code only runs when a winner has been declared.
+                if (winningPlayer != null)
+				{
+                    Console.Clear();
+                    while(true)
+					{
+                        GameEngine.VictoryMessage(winningPlayer, losingPlayer, startingTime);
+ 
+                        byte answer = GetKey();
+                        if (answer == 1)
+                        {
+                            Console.Clear();
+                            Gameboard.ResetBoard(true, player1, player2);
+                            Gameboard.History.RemoveRange(0, Gameboard.History.Count);
+                            Console.WriteLine("Press any key to continue...");
+                            Console.ReadKey();
+                            Console.Clear();
+                            break;
+                        }
+                        else if (answer == 2)
+                        {
+                            Console.Clear();
+                            Gameboard.ResetBoard(true, player1, player2);
+                            Gameboard.History.RemoveRange(0, Gameboard.History.Count);
+                            Console.WriteLine("Thank you for playing\nPress any key to continue...");
+                            Console.ReadKey();
+                            player1.Moves = 0;
+                            player2.Moves = 0;
+                            Console.Clear();
+                            startingTime = DateTime.Now;
+                            return 0;
+                        }
+                        else if (answer == 3) Gameboard.MatchReplay();
+                        Console.Clear();
+                    }
                 }
-        }
-            return 0;
+                activePlayer = activePlayer == player1 ? player2 : player1;
+            }
         }
 
         // * MAIN MENU * ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -430,7 +333,7 @@ namespace Connect4
             {
                 // The print method is used to change the colour of onscreen text should it be supported.
                 // The console needs the ability to change the colour of text to differentiate counters.
-                Console.Write("* CONNECT 4 * ");
+                Console.Write("* CONNECT X * ");
                 Print("O ", player1.Colour);
                 Console.Write("| ");
                 Print("O ", player1.Colour);
@@ -441,31 +344,31 @@ namespace Connect4
                 Console.WriteLine("Make a selection:");
                 Console.WriteLine("1 - Play Game\n2 - Instructions\n3 - Choose Player Colours\n0 - Quit");
 
-                try
-                {
+                //try
+               // {
                     byte Option = GetKey();
                     Console.Clear();
                     switch (Option)
                     {
                         case 1:
-                            int Score = PlayGame(player1, player2);
+                            int score = PlayGame(player1, player2);
                             break;
                         case 2:
                             Instructions();
                             break;
                         case 3:
-                            PlayerColourChanger(player1, player2);
+                            Player.ColourChanger(player1, player2);
                             break;
                         case 0:
                             Console.WriteLine("Thank you for playing, press any key to quit!");
                             Console.ReadKey();
                             return;
                     }
-                }
-                catch(Exception e) {
-                    Console.WriteLine(e);
-                    ;}
-                finally {Console.Clear();}
+                //}
+                //catch(Exception e) {
+                //    Console.WriteLine(e);
+                //    ;}
+                //finally {Console.Clear();}
             }
         }
     }
