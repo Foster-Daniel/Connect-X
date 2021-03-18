@@ -13,7 +13,7 @@ namespace ConnectX
     {
         public enum GameMode : sbyte { Classic, Infinity }
         public static GameMode Mode { get; set; }
-        public static List<Counter[]> Row { get; }
+        public static List<Counter[]> Rows { get; }
         public static List<(Counter, Player)> History { get; }
         public static byte VictoryNumber { get; set; } = 4;
         public static byte BoardWidth { get; set; } = 9;
@@ -21,12 +21,12 @@ namespace ConnectX
 
         public static void PrintGameBoard(bool endGame = false)
         {
-            for(short i = (short)(Row.Count - 1); i >= 0; i--)
+            for(short i = (short)(Rows.Count - 1); i >= 0; i--)
             {
                 Console.Write("|");
-                for (int j = 0; j < Row[i].Length; j++)
+                for (int j = 0; j < Rows[i].Length; j++)
                 {
-                    Row[i][j].PrintCounter();
+                    Rows[i][j].PrintCounter();
                     Console.Write("|");
                 }
                 Console.WriteLine();
@@ -52,11 +52,11 @@ namespace ConnectX
             }
         }
 
-        public static void CustomiseGame()
+        public static void CustomiseGame(Player player1, Player player2)
 		{
+            ResetBoard(true, player1, player2);
             // Delete all board data so that it can be rebuilt easily.
-            Row.RemoveAll(c => c == c); // Delete All.
-
+            Rows.RemoveAll(c => true); // Delete All.
 
             // The VictoryNumber property determines how many counters have to be placed in a row for the game to determine a winner.
             do
@@ -66,7 +66,7 @@ namespace ConnectX
                 Console.WriteLine("[4] - 4 consecutive counters.");
                 Console.WriteLine("[5] - 5 consecutive counters.");
                 Console.WriteLine("[6] - 6 consecutive counters.");
-                VictoryNumber = Program.GetKey();
+                VictoryNumber = CX.GetKey();
             } while (VictoryNumber < 4 || VictoryNumber > 6);
 
             // The BoardWidth property determines the width of the board.
@@ -81,7 +81,7 @@ namespace ConnectX
                     Console.WriteLine("[8] - 8 columns wide.");
                     Console.WriteLine("[9] - 9 columns wide.");
                 }
-                if(VictoryNumber < 6) BoardWidth = Program.GetKey();
+                if(VictoryNumber < 6) BoardWidth = CX.GetKey();
 
                 // The board is too small if VictoryNumber is 6 and the width is less than 9, because of this the board is automatically set to 9.
                 if(VictoryNumber == 5 && BoardWidth < 8) continue;
@@ -102,7 +102,7 @@ namespace ConnectX
                             Console.WriteLine("[9] - 9 columns tall.");
                         }
                         if (VictoryNumber == 4 || VictoryNumber == 5) Console.WriteLine("[0] - 10 columns tall. (Press 0)");
-                        BoardHeight = Program.GetKey();
+                        BoardHeight = CX.GetKey();
                         BoardHeight = BoardHeight == 0 ? BoardHeight = 10 : BoardHeight;
 
                         // Making sure the board isn't too short for the VictoryNumber.
@@ -118,31 +118,31 @@ namespace ConnectX
         public static void SetUpBoard()
 		{
             // Destroying the board to prevent errors when building.
-            if (Row.Count > 0) Row.RemoveRange(0, Row.Count);
+            if (Rows.Count > 0) Rows.RemoveRange(0, Rows.Count);
 
             // Adding default number of rows and colums to the grid.
-            while (Row.Count < BoardHeight)
-                Row.Add(new Counter[BoardWidth]);
+            while (Rows.Count < BoardHeight)
+                Rows.Add(new Counter[BoardWidth]);
 
             sbyte middle = BoardWidth % 2 == 0 ? (sbyte)(BoardWidth / 2) : (sbyte)((BoardWidth + 1) / 2);
             middle--;
             sbyte[] counterValues = new sbyte[BoardWidth];
-			for (sbyte x = middle, y = BoardWidth % 2 == 0 ? (sbyte)(middle + 1) : middle, z = 2; y < counterValues.Length; x--, y++, z--)
+			for (sbyte x = middle, y = BoardWidth % 2 == 0 ? (sbyte)(middle + 1) : middle; y < counterValues.Length; x--, y++)
 			{
-                counterValues[x] = z;
-                counterValues[y] = z;
+                counterValues[x] = x;
+                counterValues[y] = x;
 			}
 
-            for (byte i = 0; i < Row.Count; i++)
-                for (byte j = 0; j < Row[i].Length; j++)
-                    Row[i][j] = new Counter((i, j), counterValues[j]);
+            for (byte i = 0; i < Rows.Count; i++)
+                for (byte j = 0; j < Rows[i].Length; j++)
+                    Rows[i][j] = new Counter((i, j), counterValues[j]);
         }
 
         public static void ResetBoard(bool hardReset = true, Player player1 = null, Player player2 = null)
 		{
             // Removing any claims players might have to all counters on the board.
-            for (short i = (short)(Row.Count - 1); i >= 0; i--)
-				foreach (Counter counter in Row[i])
+            for (short i = (short)(Rows.Count - 1); i >= 0; i--)
+				foreach (Counter counter in Rows[i])
 				{
                     counter.ClaimedBy = null;
 
@@ -159,204 +159,157 @@ namespace ConnectX
         }
 
         /// <summary>
-        ///     Check the board for victory or potential moves the AI can make.
+        ///     Checks if the most recent counter or any counter passed to the method achieved victory for the user who placed it.
         /// </summary>
-        /// <param name="checkedPlayer">The player who's counters will be checked.</param>
-        /// <param name="victory">Determines whether or not to activate Victory Counters.</param>
-        /// <param name="countersNeeded">Determines how many counters are to be checked.</param>
-        /// <param name="latestMove">Pass moves to check against.</param>
-        /// <returns>The player checked against for determining a winner and possible moves the AI can make.</returns>
-        public static (Player, sbyte) CheckCounter(Counter counter = null)
+        /// <param name="counter">The counter used to determine whether or not the game has been won.</param>
+        /// <param name="test">Set to true if you want to test whether a victory would occur if the passed counter was claimed differently</param>
+        /// <param name="testPlayer">If in test mode, this player will be who the counter will be temporarily claimed against.</param>
+        /// <returns>If there is a win-state on the board from the last counter, it returns the player who placed it as the winner. Otherwise it returns null</returns>
+        public static Player CheckVictory(Counter counter = null, bool test = false, Player testPlayer = null)
 		{
+            Player result = null;
+            Player storedPlayer = null;
             counter ??= History[History.Count - 1].Item1;
+            if (test)
+			{
+                storedPlayer = counter.ClaimedBy;
+                counter.ClaimedBy = testPlayer;
+			}
 
-
-            /* By default the variable used will match with the boards own definition for the number of counters needed to win.
-                However, the code allows alternative values to be passed to the method. The following line of code checks to see
-                if 'countersNeeded' has a valid value and if it doesn't it converts it to 'VictoryNumber'. */
-            /*
             // * CHECKING VICTORY BY ROWS *
-            (Player, sbyte) result = (null, 0);
-
-            result = ScanRow(counter);
-            if (result != (null, 0)) return result;
+            result = ScanRow(counter, test);
+            if (result != null)
+            {
+                if (test) counter.ClaimedBy = storedPlayer;
+                return result;
+            }
 
             // * CHECKING VICTORY BY COLUMNS *
-            result = ScanColumn(counter);
-            if (result != (null, 0)) return result;
+            result = ScanColumn(counter, test);
+            if (result != null)
+            {
+                if (test) counter.ClaimedBy = storedPlayer;
+                return result;
+            }
 
             // * CHECKING VICTORY BY TOP LEFT TO BOTTOM RIGHT *
-            result = ScanTopLeftToBottomRight(counter);
-            if (result != (null, 0)) return result;
+            result = ScanTopLeftToBottomRight(counter, test);
+            if (result != null)
+            {
+                if (test) counter.ClaimedBy = storedPlayer;
+                return result;
+            }
 
             // * CHECKING VICTORY BY BOTTOM LEFT TO TOP RIGHT *
-            result = ScanBottomLeftToTopRight(counter);
-            if (result != (null, 0)) return result;*/
-            return (null, 0);
+            result = ScanBottomLeftToTopRight(counter, test);
+            if (result != null)
+            {
+                if (test) counter.ClaimedBy = storedPlayer;
+                return result;
+            }
+            
+            if (test) counter.ClaimedBy = storedPlayer;
+            return null;
         }
-        /*
-        private static (Player, sbyte) ScanRow(Counter counter)
-		{
+
+        private static Player ScanRow(Counter counter, bool test)
+        {
             byte coordinate = counter.Coordinates.Item2;
-            Counter[] row = Row[counter.Coordinates.Item1];
+            Counter[] row = Rows[counter.Coordinates.Item1];
+            Player checkedPlayer = counter.ClaimedBy;
 
             // This variable is used to count the number of consecutive counters in any direction.
             byte countersInARow = 0;
-            sbyte counterValue = 0;
 
-            /* It is possible for a player to get a victory by putting a counter in the missing gap as shown: | O | O |  | O |
-                assuming the VictoryNumber is 4. Because of this, the code needs to check for an empty space for the
-                opposing player to put a counter. There can be 0 and 1 but not 2 unclaimed counters when scanning. *//*
-            List<Counter> unclaimedCounters = new List<Counter>();
-
-			for (int i = coordinate - VictoryNumber; i <= coordinate + VictoryNumber; i++)
-			{
+            for (int i = coordinate - VictoryNumber; i <= coordinate + VictoryNumber; i++)
+            {
                 // Preventing out of bounds exceptions.
                 if (i < 0) i = 0;
                 if (i >= row.Length) break;
 
-                if (row[i].ClaimedBy == checkedPlayer) countersInARow++;
-                else if (row[i].ClaimedBy == null && countersInARow > 0)
-                {
-                    unclaimedCounters.Add(row[i]);
-                    if (unclaimedCounters.Count > 1)
-                    {
-                        // Protecting against errors when there are more than one unclaimed counters.
-                        if (row[i - 1].ClaimedBy == checkedPlayer) countersInARow = (byte)(i -unclaimedCounters[unclaimedCounters.Count - 2].Coordinates.Item2 - 1);
-                        unclaimedCounters.RemoveRange(0, unclaimedCounters.Count);
-                    }
-                }
-                else
-                {
-                    countersInARow = 0;
-                    unclaimedCounters.RemoveRange(0, unclaimedCounters.Count);
-                }
-
+                countersInARow = row[i].ClaimedBy == checkedPlayer? ++countersInARow : 0;
                 if (countersInARow >= VictoryNumber)
                 {
-                    byte reference = row[i].Coordinates.Item2;
-                    // Used for chaging the status of counters to victory counters.
-                    if(victory)
+                    if (!test)
                     {
-                        if (unclaimedCounters.Count > 0) return (null, 0);
+                        byte reference = row[i].Coordinates.Item2;
+                        // Used for changing the status of counters to victory counters.
                         for (int j = reference; j < reference - VictoryNumber - 1; j--)
                             row[j].VictoryCounter = true;
                     }
-                    return (checkedPlayer, checkedCounter, counterValue);
+                    return checkedPlayer;
                 }
             }
-            counterValue = 10 - (VictoryNumber - countersInARow);
-            return (checkedPlayer, checkedCounter, counterValue);
+            return null;
 		}
-        private static (Player, Counter, Counter, Counter) ScanColumn(Counter counter)
+        private static Player ScanColumn(Counter counter, bool test)
 		{
-            Counter counter = null;
+            Player player = counter.ClaimedBy;
             byte countersInAColumn = 0;
-            byte coordinate = History[History.Count - 1].Item1.Coordinates.Item1;
-			for (int i = coordinate; i > coordinate - countersNeeded && i > -1; i--)
+            byte coordinate = counter.Coordinates.Item1;
+            byte column = counter.Coordinates.Item2;
+			for (int i = coordinate; i > coordinate - VictoryNumber && i > -1; i--)
 			{
-                if (Row[i][column].ClaimedBy == checkedPlayer) countersInAColumn++;
-                else return (null, null, null, null);
+                if (Rows[i][column].ClaimedBy == player) countersInAColumn++;
+                else return null;
 
-                if(countersInAColumn >= countersNeeded)
+                if(countersInAColumn >= VictoryNumber)
 				{
-                    if (i + 1 < Row.Count && countersNeeded != VictoryNumber) counter = Row[i + countersNeeded][column].ValidateCounter();
-					else
-                        for (int j = coordinate; j < coordinate - countersNeeded; j--)
-                            Row[j][column].VictoryCounter = true;
-                    return (checkedPlayer, null, null, counter);
+                    if (!test)
+                        for (int j = coordinate; j < coordinate - VictoryNumber; j--)
+                            Rows[j][column].VictoryCounter = true;
+
+                    return player;
 				}
 			}
-            return (null, null, null, null);
+            return null;
         }
-        private static (Player, Counter, Counter, Counter) ScanTopLeftToBottomRight(Counter counter)
+        private static Player ScanTopLeftToBottomRight(Counter counter, bool test)
 		{
-            Counter firstCounter = null, middleCounter = null, lastCounter = null;
+            Player player = counter.ClaimedBy;
             byte recurringCounters = 0;
-            List<Counter> unclaimedCounters = new List<Counter>();
-            (byte, byte) coordinates = latestMove.Coordinates;
+            (byte, byte) coordinates = counter.Coordinates;
 
-			for (int i = coordinates.Item1 + countersNeeded, j = coordinates.Item2 - countersNeeded; j <= coordinates.Item2 + countersNeeded; i--, j++)
+			for (int i = coordinates.Item1 + VictoryNumber, j = coordinates.Item2 - VictoryNumber; j <= coordinates.Item2 + VictoryNumber; i--, j++)
 			{
-                int difference = 0;
                 // Protecting against out of bounds exceptions.
-                if (i >= Row.Count)
+                int difference = 0;
+                if (i < 0 || j >= BoardWidth) break;
+                if (i >= Rows.Count)
                 {
-                    // We add one here because if 'i' == 'Row.Count' it is still out of bounds by one.
-                    difference = Row.Count - i + 1;
-                    i = Row.Count - 1;
-
-                    // Adjusting 'j' so that the computer still scans on the correct diagonal.
-                    j += difference;
+                    difference = Rows.Count - i + 1; // We add one here because if 'i' == 'Rows.Count' it is still out of bounds by one.
+                    i = Rows.Count - 1;
+                    j += difference; // Adjusting 'j' so that the computer still scans on the correct diagonal.
                 }
-                else if (i < 0) break;
                 if (j < 0)
                 {
                     difference = Math.Abs(j);
                     j = 0;
-
-                    // Readjusting 'i' so that the computer still scans on the correct diagonal.
-                    i -= difference;
+                    i -= difference; // Readjusting 'i' so that the computer still scans on the correct diagonal.
                 }
-                else if (j >= BoardWidth) break;
-
-
-                if (Row[i][j].ClaimedBy == checkedPlayer) recurringCounters++;
-                else if (Row[i][j].ClaimedBy == null && recurringCounters > 0)
-                {
-                    unclaimedCounters.Add(Row[i][j]);
-                    if (unclaimedCounters.Count > 1)
-                    {
-                        // Protecting against errors when there are more than one unclaimed counters.
-                        // Calculates how many recurring counters there have been since the last unclaimed counter.
-                        if (Row[i + 1][j - 1].ClaimedBy == checkedPlayer) recurringCounters = (byte)(i - unclaimedCounters[unclaimedCounters.Count - 2].Coordinates.Item2 - 1);
-                        unclaimedCounters.RemoveRange(0, unclaimedCounters.Count);
-                    }
-                }
-                else
-                {
-                    recurringCounters = 0;
-                    unclaimedCounters.RemoveRange(0, unclaimedCounters.Count);
-                }
-                if (recurringCounters >= countersNeeded)
+                recurringCounters = Rows[i][j].ClaimedBy == player ? ++recurringCounters : 0;
+                if (recurringCounters >= VictoryNumber)
 				{
-                    (byte, byte) reference = ((byte)i, (byte)j);
-                    if(recurringCounters == VictoryNumber)
-					{
-                        if (unclaimedCounters.Count > 0) return (null, null, null, null);
-						for (int x = reference.Item1, y = reference.Item2; x < reference.Item1 + countersNeeded; x++, y--)
-                            Row[x][y].VictoryCounter = true;
-					}
-                    else
-					{
-                        if (unclaimedCounters.Count > 0)
-							for (int x = reference.Item1, y = reference.Item2; x < reference.Item1 + countersNeeded; x++, y--)
-							{
-                                middleCounter = Row[x][y].ClaimedBy == null ? Row[x][y].ValidateCounter() : null;
-                                if (middleCounter != null) return (checkedPlayer, null, middleCounter, null);
-							}
-                        else
-						{
-                            if (reference.Item1 + countersNeeded < Row.Count && reference.Item2 - countersNeeded > -1) firstCounter = Row[reference.Item1 + countersNeeded][reference.Item2 - countersNeeded].ValidateCounter();
-                            if (reference.Item1 - 1 > -1 && reference.Item2 + 1 < BoardWidth) lastCounter = Row[reference.Item1 - 1][reference.Item2 + 1].ValidateCounter();
-                            return (checkedPlayer, firstCounter, middleCounter, lastCounter);
-						}
-					}
+                    if (!test)
+                    {
+                        (byte, byte) reference = ((byte)i, (byte)j);
+                        for (int x = reference.Item1, y = reference.Item2; x < reference.Item1 + VictoryNumber; x++, y--)
+                            Rows[x][y].VictoryCounter = true;
+                    }
+                    return player;
 				}
             }
-            return (null, null, null, null);
+            return null;
 		}
-        private static (Player, Counter, Counter, Counter) ScanBottomLeftToTopRight(Counter counter)
+        private static Player ScanBottomLeftToTopRight(Counter counter, bool test)
 		{
-            Counter firstCounter = null, middleCounter = null, lastCounter = null;
+            Player player = counter.ClaimedBy;
             byte recurringCounters = 0;
-            List<Counter> unclaimedCounters = new List<Counter>();
-            (byte, byte) coordinates = (latestCounter.Coordinates.Item1, latestCounter.Coordinates.Item2);
+            (byte, byte) coordinates = (counter.Coordinates.Item1, counter.Coordinates.Item2);
 
-			for (int i = coordinates.Item1 - countersNeeded, j = coordinates.Item2 - countersNeeded; j <= coordinates.Item2 + countersNeeded; i++, j++)
+			for (int i = coordinates.Item1 - VictoryNumber, j = coordinates.Item2 - VictoryNumber; j <= coordinates.Item2 + VictoryNumber; i++, j++)
 			{
-                if (i >= Row.Count || j >= BoardWidth) break;
-
+                if (i >= Rows.Count || j >= BoardWidth) break;
                 int difference = 0;
                 if(i < 0)
 				{
@@ -371,60 +324,35 @@ namespace ConnectX
                     i -= difference;
 				}
 
-                if (Row[i][j].ClaimedBy == checkedPlayer) recurringCounters++;
-                else if (Row[i][j].ClaimedBy == null && recurringCounters > 0)
-				{
-                    unclaimedCounters.Add(Row[i][j]);
-                    if (unclaimedCounters.Count > 1)
-                    {
-                        // Protecting against errors when there are more than one unclaimed counters.
-                        // Calculates how many recurring counters there have been since the last unclaimed counter.
-                        if (Row[i - 1][j - 1].ClaimedBy == checkedPlayer) recurringCounters = (byte)(i - unclaimedCounters[unclaimedCounters.Count - 2].Coordinates.Item2 - 1);
-                        unclaimedCounters.RemoveRange(0, unclaimedCounters.Count);
-                    }
-                }
-                else
-                {
-                    recurringCounters = 0;
-                    unclaimedCounters.RemoveRange(0, unclaimedCounters.Count);
-                }
-                if(recurringCounters >= countersNeeded)
+                recurringCounters= Rows[i][j].ClaimedBy == player ? ++recurringCounters : 0;
+                if(recurringCounters >= VictoryNumber)
 			    {
-                    (byte, byte) reference = Row[i][j].Coordinates;
-                    if (countersNeeded == VictoryNumber)
-					{
-                        // Victory cannot take place if there is an unclaimed counter.
-                        if (unclaimedCounters.Count > 0) return (null, null, null, null);
-
-                        for (int x = reference.Item1, y = reference.Item2; x > reference.Item1 - countersNeeded; x--, y--)
-                            Row[x][y].VictoryCounter = true;
-                    }
-
-                    else
+                    if (!test)
                     {
-                        if (unclaimedCounters.Count > 0)
-                            for (int x = reference.Item1, y = reference.Item2; x > reference.Item1 - countersNeeded; x--, y--)
-                            {
-                                middleCounter = Row[x][y].ClaimedBy == null ? Row[x][y].ValidateCounter() : null;
-                                if (middleCounter != null) return (checkedPlayer, null, middleCounter, null);
-                            }
-                        else
-                        {
-                            if (reference.Item1 - countersNeeded > -1 && reference.Item2 - countersNeeded > -1) firstCounter = Row[reference.Item1 - countersNeeded][reference.Item2 - countersNeeded].ValidateCounter();
-                            if (reference.Item1 + 1 < Row.Count && reference.Item2 + 1 < BoardWidth) lastCounter = Row[reference.Item1 + 1][reference.Item2 + 1].ValidateCounter();
-                            return (checkedPlayer, firstCounter, middleCounter, lastCounter);
-                        }
+                        (byte, byte) reference = Rows[i][j].Coordinates;
+                        for (int x = reference.Item1, y = reference.Item2; x > reference.Item1 - VictoryNumber; x--, y--)
+                            Rows[x][y].VictoryCounter = true;
                     }
+                    return player;
                 }
             }
-            return (null, null, null, null);
+            return null;
         }
-        */
-        public static void UndoMove(Player player)
-		{  
-            History[History.Count - 1].Item1.ClaimedBy = null;
-            History.RemoveAt(History.Count - 1);
-            player.Moves--;
+        
+        public static void UndoMove()
+		{
+            if (History.Count > 0)
+			{
+                History[History.Count - 1].Item2.Moves--;
+                History[History.Count - 1].Item1.ClaimedBy = null;
+                History.RemoveAt(History.Count - 1);
+                if (GameEngine.NumberOfPlayers == 1 && History.Count > 0)
+                {
+                    History[History.Count - 1].Item2.Moves--;
+                    History[History.Count - 1].Item1.ClaimedBy = null;
+                    History.RemoveAt(History.Count - 1);
+                }
+			}
 		}
 
         public static void MatchReplay()
@@ -438,7 +366,7 @@ namespace ConnectX
                 History[i].Item1.Marker = History[i].Item2.Marker;
                 Thread.Sleep(500);
             }
-            CheckCounter(History[History.Count - 1].Item1);
+            CheckVictory(History[History.Count - 1].Item1);
         }
 
         static Gameboard()
@@ -446,7 +374,7 @@ namespace ConnectX
             // Declaring properties for the class.
             History = new List<(Counter, Player)>();
             VictoryNumber = 4;
-            Row = new List<Counter[]>();
+            Rows = new List<Counter[]>();
         }
     }
 
