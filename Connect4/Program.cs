@@ -120,12 +120,10 @@ namespace ConnectX
             Console.ReadKey();
             Console.Clear();
 
-            activePlayer.RemainingTime = new System.Timers.Timer(10000);
             // IN-GAME 
             DateTime startingTime = DateTime.Now; // This will be used to show how long a game has been played for.
             while (true)
             {
-                if (Gameboard.Mode == Gameboard.GameMode.TimeAttack) activePlayer.RemainingTime.Start();
                 // Printing to the terminal who is playing and whose move it is.
                 Console.Clear();
                 CX.Print(player1.Name, player1.Colour);
