@@ -117,7 +117,7 @@ namespace ConnectX
                             if (player2.Name.Length < 1 || player2.Name.ToLower() == player1.Name.ToLower())
                             {
                                 Console.Clear();
-                                if (player2.Name.Length < 0) Console.WriteLine("You musy give Player 2 a name.");
+                                if (player2.Name.Length < 0) Console.WriteLine("You must give Player 2 a name.");
                                 if (player2.Name.ToLower().Trim() == player1.Name.ToLower().Trim()) Console.WriteLine("The player names cannot be the same.");
                                 continue;
                             }

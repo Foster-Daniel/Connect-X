@@ -28,27 +28,11 @@ namespace ConnectX
 		{
             move--;
             for(short i = 0; i < Gameboard.Rows.Count; i++)
-                if (Gameboard.Rows[i][move].ClaimedBy == null)
+                if (Gameboard.Rows[i][move].ClaimedBy == null || (Gameboard.Mode == Gameboard.GameMode.Infinity && i == Gameboard.Rows.Count - 1))
 				{
                     // In 'Infinity' mode, when a counter is placed on the highest row, a new row is added to the top of the board.
                     // This code checks to see if a counter has been placed on the highest row and if so it adds a new row to the top of the board.
-                    if (Gameboard.Mode == Gameboard.GameMode.Infinity && i == Gameboard.Rows.Count - 1)
-                    {
-                        Gameboard.Rows.Add(new Counter[Gameboard.BoardWidth]);
-                        byte rowNumber = (byte)(Gameboard.Rows.Count - 1);
-
-                        Counter[] newRow = Gameboard.Rows[rowNumber];
-                        byte middle = Gameboard.BoardWidth % 2 == 0 ? (byte)(Gameboard.BoardWidth / 2) : (byte)((Gameboard.BoardWidth + 1) / 2);
-                        middle--;
-                        byte[] counterValues = new byte[Gameboard.BoardWidth];
-                        for (byte x = middle, y = Gameboard.BoardWidth % 2 == 0 ? (byte)(middle + 1) : middle; y < counterValues.Length; x--, y++)
-                        {
-                            counterValues[x] = x;
-                            counterValues[y] = x;
-                        }
-                        for (byte x = 0; x < Gameboard.Rows[rowNumber].Length; x++)
-                            newRow[x] = new Counter((rowNumber, x), counterValues[x]);
-                    }
+                    if (Gameboard.Mode == Gameboard.GameMode.Infinity && i == Gameboard.Rows.Count - 1 && Gameboard.Rows[i][move].ClaimedBy != null) Gameboard.RowDropper();
                     Gameboard.Rows[i][move].ClaimCounter(this);
                     Gameboard.History.Add((Gameboard.Rows[i][move], this));
                     Moves++;

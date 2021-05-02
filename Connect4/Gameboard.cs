@@ -124,10 +124,10 @@ namespace ConnectX
             while (Rows.Count < BoardHeight)
                 Rows.Add(new Counter[BoardWidth]);
 
-            sbyte middle = BoardWidth % 2 == 0 ? (sbyte)(BoardWidth / 2) : (sbyte)((BoardWidth + 1) / 2);
+            byte middle = BoardWidth % 2 == 0 ? (byte)(BoardWidth / 2) : (byte)((BoardWidth + 1) / 2);
             middle--;
-            sbyte[] counterValues = new sbyte[BoardWidth];
-			for (sbyte x = middle, y = BoardWidth % 2 == 0 ? (sbyte)(middle + 1) : middle; y < counterValues.Length; x--, y++)
+            byte[] counterValues = new byte[BoardWidth];
+			for (byte x = middle, y = BoardWidth % 2 == 0 ? (byte)(middle + 1) : middle; y < counterValues.Length; x--, y++)
 			{
                 counterValues[x] = x;
                 counterValues[y] = x;
@@ -158,6 +158,16 @@ namespace ConnectX
 			}
         }
 
+        public static void RowDropper()
+        {
+			for (int i = 0; i < Rows.Count - 1; i++)
+				for (int j = 0; j < Rows[i].Length; j++)
+                    Rows[i][j].ClaimCounter(Rows[i + 1][j].ClaimedBy);
+
+			foreach (Counter counter in Rows[Rows.Count - 1])
+                counter.ClaimCounter(null);
+        }
+
         /// <summary>
         ///     Checks if the most recent counter or any counter passed to the method achieved victory for the user who placed it.
         /// </summary>
@@ -170,12 +180,12 @@ namespace ConnectX
             Player result = null;
             Player storedPlayer = null;
             counter ??= History[History.Count - 1].Item1;
+
             if (test)
 			{
                 storedPlayer = counter.ClaimedBy;
                 counter.ClaimedBy = testPlayer;
 			}
-
             // * CHECKING VICTORY BY ROWS *
             result = ScanRow(counter, test);
             if (result != null)
@@ -227,7 +237,7 @@ namespace ConnectX
                 if (i < 0) i = 0;
                 if (i >= row.Length) break;
 
-                countersInARow = row[i].ClaimedBy == checkedPlayer? ++countersInARow : 0;
+                countersInARow = (byte)(row[i].ClaimedBy == checkedPlayer? ++countersInARow : 0);
                 if (countersInARow >= VictoryNumber)
                 {
                     if (!test)
@@ -287,7 +297,7 @@ namespace ConnectX
                     j = 0;
                     i -= difference; // Readjusting 'i' so that the computer still scans on the correct diagonal.
                 }
-                recurringCounters = Rows[i][j].ClaimedBy == player ? ++recurringCounters : 0;
+                recurringCounters = (byte)(Rows[i][j].ClaimedBy == player ? ++recurringCounters : 0);
                 if (recurringCounters >= VictoryNumber)
 				{
                     if (!test)
@@ -324,7 +334,7 @@ namespace ConnectX
                     i -= difference;
 				}
 
-                recurringCounters= Rows[i][j].ClaimedBy == player ? ++recurringCounters : 0;
+                recurringCounters = (byte)(Rows[i][j].ClaimedBy == player ? ++recurringCounters : 0);
                 if(recurringCounters >= VictoryNumber)
 			    {
                     if (!test)

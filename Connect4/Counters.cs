@@ -8,9 +8,6 @@ namespace ConnectX
 {
     public class Counter
     {
-		private (byte rowNumber, byte x) p;
-		private byte x;
-
 		public bool VictoryCounter { get; set; } = false;
         public char Marker { get; set; } = '_';
 		public Player ClaimedBy { get; set; }
@@ -18,14 +15,14 @@ namespace ConnectX
 
         /* Counters in the middle of the board are more likely to yield a better tactical position
             because they are more likely to be a part of one or more set fo consecutive counters. */ 
-        public sbyte PositionValue { get; set; } = 0;
+        public byte PositionValue { get; set; } = 0;
         public sbyte StrategicValue { get; set; } = 0;
-        public sbyte GetValue() => (sbyte)(PositionValue + StrategicValue);
+        public short GetValue() => (short)(PositionValue + StrategicValue);
 
 		public void ClaimCounter(Player chosenPlayer)
 		{
             ClaimedBy = chosenPlayer;
-            Marker = chosenPlayer.Marker;
+            Marker = chosenPlayer != null ? chosenPlayer.Marker : ' ';
 		}
 
         public void PrintCounter()
@@ -195,17 +192,11 @@ namespace ConnectX
                 else return forwardsRecurring >= backwardsRecurring ? forwardsRecurring : backwardsRecurring;
             }
         }
-        public Counter((byte, byte)coordinates, sbyte positionValue)
+        public Counter((byte, byte)coordinates, byte positionValue)
         {
             Coordinates = coordinates;
             Marker = ' ';
             PositionValue = positionValue;
         }
-
-		public Counter((byte rowNumber, byte x) p, byte x)
-		{
-			this.p = p;
-			this.x = x;
-		}
 	}
 }

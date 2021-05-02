@@ -28,9 +28,9 @@ namespace ConnectX
                 switch (playerChoice)
                 {
                     case ConsoleKey.Escape:
-                        return !menu ? 0 : 1;
+                        return !menu ? (byte)(0) : (byte)(1);
                     case ConsoleKey.P:
-                        return !menu ? 0 : 1;
+                        return !menu ? (byte)(0) : (byte)(1);
                     case ConsoleKey.D0:
                         return 0;
                     case ConsoleKey.D1:
